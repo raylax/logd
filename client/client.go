@@ -30,6 +30,7 @@ func (c *client) Start()  {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	log.Printf("upstream connected")
 	for {
 		logLine, err := netio.ReadLog(conn)
 		if err != nil {
