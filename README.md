@@ -38,5 +38,5 @@ logs:
 ### 启动client
 ```shell
 # -upstream 指定server
-./logd_darwin_amd64 -client -upstream 1.2.3.4:6789
+./logd -client -upstream 1.2.3.4:6789
 ```
