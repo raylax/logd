@@ -14,6 +14,7 @@ const bufferSize = 1024
 
 type agent struct {
 	config *config
+	connected bool
 }
 
 func NewAgent(config *config) *agent {
@@ -33,11 +34,13 @@ func (a *agent) Start()  {
 		log.Fatalf("%v", err)
 	}
 	for _, logFile := range a.config.Logs {
-		go tailFile(logs, server, logFile.File, logFile.Name)
+		go a.tailFile(logs, server, logFile.File, logFile.Name)
 	}
+	a.connected = true
 	for line := range logs {
 		err = netio.WriteLog(conn, line)
 		if err != nil {
+			a.connected = false
 			log.Printf("write to upstream error, %v", err)
 			for {
 				<-time.After(1 * time.Second)
@@ -48,13 +51,14 @@ func (a *agent) Start()  {
 					continue
 				}
 				log.Printf("upstream reconnected [%s]", a.config.Upstream)
+				a.connected = true
 				break
 			}
 		}
 	}
 }
 
-func tailFile(logs chan<- *model.LogLine, server string, file string, name string) {
+func (a *agent) tailFile(logs chan<- *model.LogLine, server string, file string, name string) {
 	log.Printf("open file [%s]", file)
 	stat, err := os.Stat(file)
 	if err != nil {
@@ -68,6 +72,9 @@ func tailFile(logs chan<- *model.LogLine, server string, file string, name strin
 		log.Printf("can not read file [%s], error:%v", file, err)
 	}
 	for line := range logFile.Lines {
+		if !a.connected {
+			continue
+		}
 		logs <- &model.LogLine{
 			Time:	line.Time.Unix(),
 			Server: server,
